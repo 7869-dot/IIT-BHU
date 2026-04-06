@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+sqlalchemy
+python-multipart
+deepface
+opencv-python-headless
+pillow
+tf-keras
+python-dotenv
+numpy
+google-generativeai
