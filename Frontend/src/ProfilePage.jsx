@@ -1,13 +1,58 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Galaxy from './Galaxy';
 import Dock from './Dock';
 import TopNavbar from './TopNavbar';
 import { VscHome, VscArchive, VscAccount, VscSettingsGear } from 'react-icons/vsc';
-import './index.css';
+import { apiService } from './services/api'; import './index.css';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [photo, setPhoto] = useState(null);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    age: '',
+    gender: 'Select',
+    description: '',
+  });
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setPhoto(e.target.files[0]);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (!formData.firstName || !formData.lastName || !formData.age || !photo) {
+      alert("Please fill in all required fields and upload a photo.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = new FormData();
+      data.append('name', `${formData.firstName} ${formData.lastName}`);
+      data.append('age', parseInt(formData.age));
+      data.append('description', formData.description || `Gender: ${formData.gender}`);
+      data.append('photo', photo);
+
+      await apiService.registerVictim(data);
+      alert("Victim registered successfully!");
+      navigate('/archive');
+    } catch (err) {
+      console.error(err);
+      alert("Failed to register victim: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const items = [
     { icon: <VscHome size={18} />, label: 'Dashboard', onClick: () => navigate('/galaxy') },
@@ -110,7 +155,14 @@ export default function ProfilePage() {
             <div style={styles.row}>
               <div style={styles.field}>
                 <label style={styles.label}>First Name <span style={styles.req}>*</span></label>
-                <input className="arg-input" style={styles.input} placeholder="e.g. Anjali" />
+                <input 
+                  name="firstName"
+                  className="arg-input" 
+                  style={styles.input} 
+                  placeholder="e.g. Anjali" 
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                />
               </div>
               <div style={styles.field}>
                 <label style={styles.label}>Middle Name</label>
@@ -118,18 +170,39 @@ export default function ProfilePage() {
               </div>
               <div style={styles.field}>
                 <label style={styles.label}>Last Name <span style={styles.req}>*</span></label>
-                <input className="arg-input" style={styles.input} placeholder="e.g. Kumari" />
+                <input 
+                  name="lastName"
+                  className="arg-input" 
+                  style={styles.input} 
+                  placeholder="e.g. Kumari" 
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                />
               </div>
             </div>
             <div style={styles.row}>
               <div style={styles.field}>
                 <label style={styles.label}>Age <span style={styles.req}>*</span></label>
-                <input type="number" className="arg-input" style={styles.input} placeholder="Years" />
+                <input 
+                  name="age"
+                  type="number" 
+                  className="arg-input" 
+                  style={styles.input} 
+                  placeholder="Years" 
+                  value={formData.age}
+                  onChange={handleInputChange}
+                />
               </div>
               <div style={styles.field}>
                 <label style={styles.label}>Gender <span style={styles.req}>*</span></label>
-                <select className="arg-select" style={styles.select}>
-                  <option value="">Select</option>
+                <select 
+                  name="gender"
+                  className="arg-select" 
+                  style={styles.select}
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                >
+                  <option value="Select">Select</option>
                   <option>Male</option><option>Female</option><option>Other</option>
                 </select>
               </div>
@@ -243,7 +316,14 @@ export default function ProfilePage() {
             <div style={{...styles.row, marginBottom: 0}}>
               <div style={styles.fieldFull}>
                 <label style={styles.label}>Circumstances of Disappearance</label>
-                <textarea className="arg-textarea" style={styles.textarea} placeholder="Describe the situation in which the person was last seen..."></textarea>
+                <textarea 
+                  name="description"
+                  className="arg-textarea" 
+                  style={styles.textarea} 
+                  placeholder="Describe the situation in which the person was last seen..."
+                  value={formData.description}
+                  onChange={handleInputChange}
+                ></textarea>
               </div>
             </div>
           </div>
@@ -253,10 +333,16 @@ export default function ProfilePage() {
               <span style={styles.cardNum}>04</span>
               <span style={styles.cardTitle}>Profile Photo</span>
             </div>
-            <div className="upload-box" style={styles.uploadBox}>
-              <div style={styles.uploadText}>Click to upload photo</div>
+            <label className="upload-box" style={styles.uploadBox}>
+              <input 
+                type="file" 
+                accept="image/*" 
+                style={{ display: 'none' }} 
+                onChange={handleFileChange}
+              />
+              <div style={styles.uploadText}>{photo ? photo.name : 'Click to upload photo'}</div>
               <div style={styles.uploadSub}>JPG · PNG · WEBP · MAX 5MB</div>
-            </div>
+            </label>
           </div>
 
           <div style={styles.card}>
@@ -305,7 +391,13 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <button style={styles.submitBtn}>REGISTER CASE →</button>
+          <button 
+            style={{...styles.submitBtn, opacity: loading ? 0.5 : 1}} 
+            disabled={loading}
+            onClick={handleRegister}
+          >
+            {loading ? 'REGISTERING...' : 'REGISTER CASE →'}
+          </button>
         </div>
 
         <Dock items={items} panelHeight={68} baseItemSize={50} magnification={70} />

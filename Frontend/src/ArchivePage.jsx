@@ -1,10 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Galaxy from './Galaxy';
 import Dock from './Dock';
 import TopNavbar from './TopNavbar';
 import { VscHome, VscArchive, VscAccount, VscSettingsGear, VscSearch } from 'react-icons/vsc';
+import { apiService } from './services/api';
 import './index.css';
+
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://localhost:8000/storage';
 
 // Mock Data
 const CASES = [
@@ -25,6 +28,9 @@ const CASES = [
 export default function ArchivePage() {
   const navigate = useNavigate();
 
+  const [cases, setCases] = useState([]);
+  const [dbStats, setDbStats] = useState({ all: 0, crit: 0, act: 0, watch: 0, res: 0 });
+  const [loading, setLoading] = useState(true);
   const [currentFilter, setCurrentFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [stateFilter, setStateFilter] = useState('');
@@ -33,6 +39,52 @@ export default function ArchivePage() {
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const PER_PAGE = 10;
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [sightings, stats] = await Promise.all([
+        apiService.getAllSightings(),
+        apiService.getDashboardStats()
+      ]);
+
+      setDbStats({
+        all: stats.total_sightings,
+        crit: stats.total_alerts,
+        act: stats.total_sightings - stats.total_alerts,
+        watch: 0,
+        res: 0
+      });
+
+      // Map backend sightings to frontend format
+      const mapped = sightings.map(s => ({
+        id: `SG-${s.id.toString().padStart(4, '0')}`,
+        name: stats.victim_name || 'Registered Victim',
+        initials: (stats.victim_name || 'RV').split(' ').map(n => n[0]).join(''),
+        age: 'N/A',
+        gender: 'N/A',
+        location: s.location,
+        state: 'N/A', 
+        date: s.timestamp.split('T')[0],
+        status: s.is_alert ? 'CRITICAL' : 'ACTIVE',
+        match: Math.round(s.confidence),
+        officer: 'AI Engine',
+        flags: s.is_alert ? ['AI MATCH'] : [],
+        sighting_image: s.sighting_image,
+        annotated_image: s.annotated_image
+      }));
+
+      setCases(mapped);
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const items = [
     { icon: <VscHome size={18} />, label: 'Dashboard', onClick: () => navigate('/galaxy') },
@@ -44,12 +96,10 @@ export default function ArchivePage() {
   // Derived state
   const filteredData = useMemo(() => {
     let q = searchQuery.toLowerCase();
-    let data = CASES.filter(c => {
-      const matchQ = !q || c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q) || c.location.toLowerCase().includes(q) || c.officer.toLowerCase().includes(q);
+    let data = cases.filter(c => {
+      const matchQ = !q || c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q) || c.location.toLowerCase().includes(q);
       const matchStatus = currentFilter === 'all' || c.status === currentFilter;
-      const matchState = !stateFilter || c.state === stateFilter;
-      const matchGender = !genderFilter || c.gender === genderFilter;
-      return matchQ && matchStatus && matchState && matchGender;
+      return matchQ && matchStatus;
     });
 
     data.sort((a, b) => {
@@ -59,17 +109,9 @@ export default function ArchivePage() {
       return b.date.localeCompare(a.date);
     });
     return data;
-  }, [searchQuery, currentFilter, stateFilter, genderFilter, sortOption]);
+  }, [searchQuery, currentFilter, cases, sortOption]);
 
-  const stats = useMemo(() => {
-    return {
-      all: CASES.length,
-      crit: CASES.filter(c => c.status === 'CRITICAL').length,
-      act: CASES.filter(c => c.status === 'ACTIVE').length,
-      watch: CASES.filter(c => c.status === 'WATCH').length,
-      res: CASES.filter(c => c.status === 'RESOLVED').length,
-    };
-  }, []);
+  const stats = dbStats;
 
   const totalPages = Math.ceil(filteredData.length / PER_PAGE);
   const startIdx = (currentPage - 1) * PER_PAGE;
@@ -165,8 +207,8 @@ export default function ArchivePage() {
           
           <div style={styles.header}>
             <div>
-              <h1 style={styles.title}>CASE ARCHIVE</h1>
-              <div style={styles.subtitle}>// {CASES.length} TOTAL RECORDS · ALL DATA SYNCHRONIZED</div>
+              <h1 style={styles.title}>SIGHTING LOG</h1>
+              <div style={styles.subtitle}>// {cases.length} TOTAL RECORDS · {loading ? 'FETCHING...' : 'SYNCHRONIZED'}</div>
             </div>
             <div>
               <button style={styles.actionBtnGhost} className="btn-hover">⬇ EXPORT</button>
@@ -263,8 +305,10 @@ export default function ArchivePage() {
                   <tr key={c.id} className={`hover-row ${selectedRows.has(c.id) ? 'selected' : ''}`} onClick={() => handleSelectRow(c.id)}>
                     <td style={{...styles.td, paddingLeft: '24px'}}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '36px', height: '36px', borderRadius: '6px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 600, color: '#fff' }}>
-                          {c.initials}
+                        <div style={{ width: '36px', height: '36px', borderRadius: '6px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 600, color: '#fff', overflow: 'hidden' }}>
+                          {c.annotated_image ? (
+                            <img src={`${STORAGE_URL}/${c.annotated_image.split('/').pop()}`} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                          ) : c.initials}
                         </div>
                         <div>
                           <div style={{ color: '#fff', fontWeight: 500, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
