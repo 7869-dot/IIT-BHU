@@ -1,3 +1,7 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
 import cv2
 import numpy as np
 from deepface import DeepFace
@@ -133,7 +137,7 @@ def _draw_bounding_box(
         )
 
     p = Path(sighting_path)
-    annotated_path = str(p.parent / f"annotated_{p.name}")
+    annotated_path = str(p.parent / f"annotated_{p.name}").replace("\\", "/")
     cv2.imwrite(annotated_path, img)
     return annotated_path
 
@@ -169,7 +173,7 @@ Sighting Data:
 Write the intelligence report now:
 """
     try:
-        model    = genai.GenerativeModel("gemini-2.5-flash")
+        model    = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(prompt)
         return response.text.strip()
     except Exception as e:

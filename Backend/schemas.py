@@ -14,6 +14,7 @@ class VictimResponse(BaseModel):
     age: int
     description: Optional[str]
     reference_photo: Optional[str]
+    additional_media_paths: list[str] = []
 
     class Config:
         from_attributes = True
@@ -25,6 +26,7 @@ class SightingResponse(BaseModel):
     id: int
     victim_id: int
     location: str
+    camera_id: Optional[str]
     latitude: Optional[float]
     longitude: Optional[float]
     timestamp: str
@@ -32,7 +34,15 @@ class SightingResponse(BaseModel):
     annotated_image: Optional[str]
     confidence: float
     is_alert: bool
+    action_link: Optional[str]
     notes: Optional[str]
 
     class Config:
         from_attributes = True
+
+
+class SightingProcessResponse(BaseModel):
+    logged: bool
+    confidence: float
+    message: str
+    sighting: Optional[SightingResponse] = None
