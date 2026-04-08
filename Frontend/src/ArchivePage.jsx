@@ -14,6 +14,23 @@ const toStorageUrl = (path) => {
   return `${STORAGE_URL}/${normalized}`;
 };
 
+function parseGenderFromDescription(description) {
+  if (!description) return 'N/A';
+  const m = description.match(/Gender:\s*([^\n]+)/i);
+  return m ? m[1].trim() : 'N/A';
+}
+
+function initialsFromName(name) {
+  if (!name) return 'RV';
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 3);
+}
+
 // Mock Data
 const CASES = [
   {id:'MP-2026-0248',name:'Anjali Kumari',initials:'AK',age:14,gender:'Female',location:'Hazratganj, Lucknow',state:'Uttar Pradesh',date:'2026-04-03',status:'CRITICAL',match:84,officer:'SI Sharma',flags:['MINOR','TRAFFICKING RISK']},
@@ -59,9 +76,10 @@ export default function ArchivePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [sightings, stats] = await Promise.all([
+      const [sightings, stats, victim] = await Promise.all([
         apiService.getAllSightings(),
-        apiService.getDashboardStats()
+        apiService.getDashboardStats(),
+        apiService.getVictimProfile().catch(() => null),
       ]);
 
       setDbStats({
@@ -69,30 +87,58 @@ export default function ArchivePage() {
         crit: stats.total_alerts,
         act: stats.total_sightings - stats.total_alerts,
         watch: 0,
-        res: 0
+        res: 0,
       });
 
-      // Map backend sightings to frontend format
-      const mapped = sightings.map(s => ({
+      const victimName = victim?.name ?? stats.victim_name ?? 'Registered Victim';
+      const victimAge = victim?.age ?? 'N/A';
+      const victimGender = victim ? parseGenderFromDescription(victim.description) : 'N/A';
+      const victimInitials = initialsFromName(victimName);
+      const referencePhoto = victim?.reference_photo ?? null;
+
+      let mapped = (sightings || []).map((s) => ({
         id: `SG-${s.id.toString().padStart(4, '0')}`,
-        name: stats.victim_name || 'Registered Victim',
-        initials: (stats.victim_name || 'RV').split(' ').map(n => n[0]).join(''),
-        age: 'N/A',
-        gender: 'N/A',
+        name: victimName,
+        initials: victimInitials,
+        age: victimAge,
+        gender: victimGender,
         location: s.location,
-        state: 'N/A', 
-        date: s.timestamp.split('T')[0],
+        state: 'N/A',
+        date: (s.timestamp || '').split('T')[0] || '—',
         status: s.is_alert ? 'CRITICAL' : 'ACTIVE',
         match: Math.round(s.confidence),
         officer: 'AI Engine',
         flags: s.is_alert ? ['AI MATCH'] : [],
         sighting_image: s.sighting_image,
-        annotated_image: s.annotated_image
+        annotated_image: s.annotated_image,
+        reference_photo: referencePhoto,
       }));
+
+      if (mapped.length === 0 && victim) {
+        mapped = [
+          {
+            id: `VIC-${victim.id.toString().padStart(4, '0')}`,
+            name: victim.name,
+            initials: initialsFromName(victim.name),
+            age: victim.age,
+            gender: parseGenderFromDescription(victim.description),
+            location: 'No sightings yet — registered profile',
+            state: 'N/A',
+            date: '—',
+            status: 'WATCH',
+            match: 0,
+            officer: '—',
+            flags: ['REGISTERED'],
+            sighting_image: null,
+            annotated_image: null,
+            reference_photo: victim.reference_photo,
+          },
+        ];
+      }
 
       setCases(mapped);
     } catch (err) {
-      console.error("Failed to fetch dashboard data:", err);
+      console.error('Failed to fetch dashboard data:', err);
     } finally {
       setLoading(false);
     }
@@ -111,7 +157,8 @@ export default function ArchivePage() {
     let data = cases.filter(c => {
       const matchQ = !q || c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q) || c.location.toLowerCase().includes(q);
       const matchStatus = currentFilter === 'all' || c.status === currentFilter;
-      return matchQ && matchStatus;
+      const matchGender = !genderFilter || c.gender === genderFilter;
+      return matchQ && matchStatus && matchGender;
     });
 
     data.sort((a, b) => {
@@ -121,7 +168,7 @@ export default function ArchivePage() {
       return b.date.localeCompare(a.date);
     });
     return data;
-  }, [searchQuery, currentFilter, cases, sortOption]);
+  }, [searchQuery, currentFilter, genderFilter, cases, sortOption]);
 
   const stats = dbStats;
 
@@ -323,8 +370,12 @@ export default function ArchivePage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '36px', height: '36px', borderRadius: '6px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 600, color: '#fff', overflow: 'hidden' }}>
                           {c.annotated_image ? (
-                            <img src={toStorageUrl(c.annotated_image)} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                          ) : c.initials}
+                            <img src={toStorageUrl(c.annotated_image)} alt="" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                          ) : c.reference_photo ? (
+                            <img src={toStorageUrl(c.reference_photo)} alt="" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                          ) : (
+                            c.initials
+                          )}
                         </div>
                         <div>
                           <div style={{ color: '#fff', fontWeight: 500, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
