@@ -12,10 +12,16 @@ export const LogoIcon = () => (
 
 export default function TopNavbar() {
   const [time, setTime] = useState(new Date());
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('resize', onResize);
+    };
   }, []);
 
   const formattedTimeParts = new Intl.DateTimeFormat('en-IN', {
@@ -34,8 +40,8 @@ export default function TopNavbar() {
         <LogoIcon />
         <span>Omnyx</span>
       </div>
-      <div className="nav-links" style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', fontWeight: 500, letterSpacing: '0.02em', display: 'flex', gap: '16px' }}>
-        <span>{formattedTimeParts[0]}</span>
+      <div className="nav-links" style={{ color: 'rgba(255,255,255,0.8)', fontSize: isMobile ? '0.78rem' : '0.9rem', fontWeight: 500, letterSpacing: '0.02em', display: 'flex', gap: isMobile ? '8px' : '16px' }}>
+        {!isMobile && <span>{formattedTimeParts[0]}</span>}
         <span>{formattedTimeParts[1]}</span>
       </div>
     </nav>

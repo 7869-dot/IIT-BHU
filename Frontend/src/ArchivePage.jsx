@@ -3,11 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import Galaxy from './Galaxy';
 import Dock from './Dock';
 import TopNavbar from './TopNavbar';
-import { VscHome, VscArchive, VscAccount, VscSettingsGear, VscSearch } from 'react-icons/vsc';
+import { VscHome, VscArchive, VscAccount, VscGraphLine, VscSearch } from 'react-icons/vsc';
 import { apiService } from './services/api';
 import './index.css';
 
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://localhost:8000/storage';
+const toStorageUrl = (path) => {
+  if (!path) return '';
+  const normalized = path.replace(/\\/g, '/').replace(/^storage\//, '');
+  return `${STORAGE_URL}/${normalized}`;
+};
 
 // Mock Data
 const CASES = [
@@ -27,6 +32,7 @@ const CASES = [
 
 export default function ArchivePage() {
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   const [cases, setCases] = useState([]);
   const [dbStats, setDbStats] = useState({ all: 0, crit: 0, act: 0, watch: 0, res: 0 });
@@ -42,6 +48,12 @@ export default function ArchivePage() {
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
   const fetchData = async () => {
@@ -90,7 +102,7 @@ export default function ArchivePage() {
     { icon: <VscHome size={18} />, label: 'Dashboard', onClick: () => navigate('/galaxy') },
     { icon: <VscArchive size={18} />, label: 'Archive', onClick: () => alert('Already here!') },
     { icon: <VscAccount size={18} />, label: 'New Profile', onClick: () => navigate('/profile') },
-    { icon: <VscSettingsGear size={18} />, label: 'Settings', onClick: () => alert('Settings!') },
+    { icon: <VscGraphLine size={18} />, label: 'Analytics', onClick: () => navigate('/analytics') },
   ];
 
   // Derived state
@@ -135,12 +147,12 @@ export default function ArchivePage() {
 
   const styles = {
     container: {
-      flex: 1, overflowY: 'auto', padding: '120px 24px 140px 24px', 
+      flex: 1, overflowY: 'auto', padding: isMobile ? '96px 12px 110px 12px' : '120px 24px 140px 24px',
       width: '100%', maxWidth: '1100px', margin: '0 auto', 
       scrollbarWidth: 'none', msOverflowStyle: 'none'
     },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' },
-    title: { fontSize: '2.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: '#fff' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '12px' : 0, marginBottom: '30px' },
+    title: { fontSize: isMobile ? '1.8rem' : '2.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: '#fff' },
     subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', marginTop: '8px', fontFamily: 'monospace' },
     actionBtnPrimary: {
       background: '#ffffff', color: '#000000', border: 'none', padding: '10px 24px', borderRadius: '100px',
@@ -150,7 +162,7 @@ export default function ArchivePage() {
       background: 'transparent', color: '#ffffff', border: '1px solid rgba(255,255,255,0.2)', padding: '10px 24px', borderRadius: '100px',
       fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
     },
-    statsRow: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '24px' },
+    statsRow: { display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '12px', marginBottom: '24px' },
     miniStat: (active, color) => ({
       background: active ? 'rgba(255,255,255,0.05)' : 'rgba(0, 0, 0, 0.4)', 
       border: `1px solid ${active ? color : 'rgba(255, 255, 255, 0.08)'}`,
@@ -172,7 +184,7 @@ export default function ArchivePage() {
     table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
     th: { padding: '16px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em', fontWeight: 600 },
     td: { padding: '16px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', verticalAlign: 'middle', fontSize: '0.9rem' },
-    bulkBar: { background: 'rgba(88, 166, 255, 0.1)', border: '1px solid rgba(88, 166, 255, 0.2)', borderRadius: '8px', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' },
+    bulkBar: { background: 'rgba(88, 166, 255, 0.1)', border: '1px solid rgba(88, 166, 255, 0.2)', borderRadius: '8px', padding: '12px 20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', marginBottom: '16px' },
     pill: (status) => ({
       display: 'inline-block', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.05em',
       background: `rgba(${statusColors[status].replace('#','').match(/.{2}/g).map(x=>parseInt(x,16)).join(',')}, 0.1)`,
@@ -194,6 +206,10 @@ export default function ArchivePage() {
         .page-btn:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
         .page-btn.active { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.4); color: #fff; }
         .row-check { width: 16px; height: 16px; accent-color: #58a6ff; cursor: pointer; }
+        @media (max-width: 768px) {
+          .archive-container h1 { line-height: 1.1; }
+          .archive-container table { min-width: 760px; }
+        }
       `}</style>
 
       <div className="bg-container">
@@ -307,7 +323,7 @@ export default function ArchivePage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '36px', height: '36px', borderRadius: '6px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 600, color: '#fff', overflow: 'hidden' }}>
                           {c.annotated_image ? (
-                            <img src={`${STORAGE_URL}/${c.annotated_image.split('/').pop()}`} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                            <img src={toStorageUrl(c.annotated_image)} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                           ) : c.initials}
                         </div>
                         <div>
@@ -365,7 +381,7 @@ export default function ArchivePage() {
 
         </div>
 
-        <Dock items={items} panelHeight={68} baseItemSize={50} magnification={70} />
+        <Dock items={items} panelHeight={isMobile ? 58 : 68} baseItemSize={isMobile ? 40 : 50} magnification={isMobile ? 56 : 70} />
       </div>
     </>
   );

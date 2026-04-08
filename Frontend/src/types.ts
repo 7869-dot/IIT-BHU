@@ -8,12 +8,14 @@ export interface VictimResponse {
   age: number;
   description: string | null;
   reference_photo: string | null;
+  additional_media_paths: string[];
 }
 
 export interface SightingResponse {
   id: number;
   victim_id: number;
   location: string;
+  camera_id: string | null;
   latitude: number | null;
   longitude: number | null;
   timestamp: string;
@@ -21,6 +23,7 @@ export interface SightingResponse {
   annotated_image: string | null;
   confidence: number;
   is_alert: boolean;
+  action_link: string | null;
   notes: string | null;
 }
 

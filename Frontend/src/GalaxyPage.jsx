@@ -1,23 +1,30 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Galaxy from './Galaxy';
 import Dock from './Dock';
 import BorderGlow from './BorderGlow';
 import CircularGallery from './CircularGallery';
 import TopNavbar from './TopNavbar';
-import { VscHome, VscArchive, VscAccount, VscSettingsGear } from 'react-icons/vsc';
+import { VscHome, VscArchive, VscAccount, VscGraphLine } from 'react-icons/vsc';
 import { BsStars } from 'react-icons/bs';
 import './index.css';
 
 function GalaxyPage() {
-  const [demoContent, setDemoContent] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [demoContent, setDemoContent] = useState(window.innerWidth > 768);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const items = [
     { icon: <VscHome size={18} />, label: 'Dashboard', onClick: () => alert('Dashboard!') },
     { icon: <VscArchive size={18} />, label: 'Archive', onClick: () => navigate('/archive') },
     { icon: <VscAccount size={18} />, label: 'New Profile', onClick: () => navigate('/profile') },
-    { icon: <VscSettingsGear size={18} />, label: 'Settings', onClick: () => alert('Settings!') },
+    { icon: <VscGraphLine size={18} />, label: 'Analytics', onClick: () => navigate('/analytics') },
   ];
 
   return (
@@ -43,7 +50,7 @@ function GalaxyPage() {
         <TopNavbar />
 
         {/* Corner Toggle */}
-        <div style={{ position: 'absolute', bottom: '20px', right: '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ position: 'absolute', bottom: isMobile ? '88px' : '20px', right: isMobile ? '16px' : '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', fontWeight: 500 }}>Demo Content</span>
           <div
             onClick={() => setDemoContent(!demoContent)}
@@ -63,7 +70,7 @@ function GalaxyPage() {
         </div>
 
         {/* Floating Cards Array */}
-        {demoContent && (
+        {demoContent && !isMobile && (
           <div style={{ 
             position: 'absolute', 
             top: '28%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -123,7 +130,7 @@ function GalaxyPage() {
         )}
 
         {/* Circular Media Gallery */}
-        {demoContent && (
+        {demoContent && !isMobile && (
           <div style={{
             position: 'absolute',
             top: '48%', 
@@ -146,9 +153,9 @@ function GalaxyPage() {
         {/* Mac-style Interactive Dock */}
         <Dock
           items={items}
-          panelHeight={68}
-          baseItemSize={50}
-          magnification={70}
+          panelHeight={isMobile ? 58 : 68}
+          baseItemSize={isMobile ? 40 : 50}
+          magnification={isMobile ? 56 : 70}
         />
       </div>
     </>

@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import Galaxy from './Galaxy';
 import Dock from './Dock';
 import TopNavbar from './TopNavbar';
-import { VscHome, VscArchive, VscAccount, VscSettingsGear } from 'react-icons/vsc';
+import { VscHome, VscArchive, VscAccount, VscGraphLine } from 'react-icons/vsc';
 import { apiService } from './services/api'; import './index.css';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [loading, setLoading] = useState(false);
   const [photo, setPhoto] = useState(null);
+  const [additionalMedia, setAdditionalMedia] = useState([]);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -17,6 +19,12 @@ export default function ProfilePage() {
     gender: 'Select',
     description: '',
   });
+
+  React.useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -26,6 +34,12 @@ export default function ProfilePage() {
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       setPhoto(e.target.files[0]);
+    }
+  };
+
+  const handleAdditionalMediaChange = (e) => {
+    if (e.target.files?.length) {
+      setAdditionalMedia(Array.from(e.target.files));
     }
   };
 
@@ -42,6 +56,7 @@ export default function ProfilePage() {
       data.append('age', parseInt(formData.age));
       data.append('description', formData.description || `Gender: ${formData.gender}`);
       data.append('photo', photo);
+      additionalMedia.forEach((file) => data.append('additional_media', file));
 
       await apiService.registerVictim(data);
       alert("Victim registered successfully!");
@@ -58,14 +73,14 @@ export default function ProfilePage() {
     { icon: <VscHome size={18} />, label: 'Dashboard', onClick: () => navigate('/galaxy') },
     { icon: <VscArchive size={18} />, label: 'Archive', onClick: () => navigate('/archive') },
     { icon: <VscAccount size={18} />, label: 'New Profile', onClick: () => alert('Already here!') },
-    { icon: <VscSettingsGear size={18} />, label: 'Settings', onClick: () => alert('Settings!') },
+    { icon: <VscGraphLine size={18} />, label: 'Analytics', onClick: () => navigate('/analytics') },
   ];
 
   const styles = {
     container: {
       flex: 1,
       overflowY: 'auto',
-      padding: '120px 24px 140px 24px',
+      padding: isMobile ? '96px 12px 110px 12px' : '120px 24px 140px 24px',
       width: '100%',
       maxWidth: '900px',
       margin: '0 auto',
@@ -73,14 +88,14 @@ export default function ProfilePage() {
       msOverflowStyle: 'none'
     },
     header: { marginBottom: '40px' },
-    title: { fontSize: '2.5rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '8px', color: '#fff' },
+    title: { fontSize: isMobile ? '1.8rem' : '2.5rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '8px', color: '#fff' },
     subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem' },
     card: {
       background: 'rgba(20, 20, 20, 0.4)',
       border: '1px solid rgba(255, 255, 255, 0.08)',
       backdropFilter: 'blur(12px)',
       borderRadius: '12px',
-      padding: '28px',
+      padding: isMobile ? '16px' : '28px',
       marginBottom: '24px'
     },
     cardHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' },
@@ -134,6 +149,9 @@ export default function ProfilePage() {
         .priority-btn:hover { background: rgba(255,255,255,0.05); }
         .upload-box:hover { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.4) !important; }
         select.arg-select option { background: #0a0a0a; color: white; }
+        @media (max-width: 768px) {
+          .form-container h1 { line-height: 1.1; }
+        }
       `}</style>
       <div className="bg-container">
         <Galaxy mouseRepulsion mouseInteraction density={1} glowIntensity={0.3} saturation={0} hueShift={140} twinkleIntensity={0.3} rotationSpeed={0.1} repulsionStrength={2} autoCenterRepulsion={0} starSpeed={0.5} speed={1} />
@@ -385,10 +403,18 @@ export default function ProfilePage() {
               <span style={styles.cardNum}>06</span>
               <span style={styles.cardTitle}>Additional Media</span>
             </div>
-            <div className="upload-box" style={styles.uploadBox}>
-              <div style={styles.uploadText}>Drag or click — CCTV clips, photos, documents</div>
-              <div style={styles.uploadSub}>MULTIPLE FILES ALLOWED</div>
-            </div>
+            <label className="upload-box" style={styles.uploadBox}>
+              <input
+                type="file"
+                multiple
+                style={{ display: 'none' }}
+                onChange={handleAdditionalMediaChange}
+              />
+              <div style={styles.uploadText}>
+                {additionalMedia.length > 0 ? `${additionalMedia.length} files selected` : 'Additional Media'}
+              </div>
+              <div style={styles.uploadSub}>Click to select CCTV clips, photos, documents</div>
+            </label>
           </div>
 
           <button 
@@ -400,7 +426,7 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        <Dock items={items} panelHeight={68} baseItemSize={50} magnification={70} />
+        <Dock items={items} panelHeight={isMobile ? 58 : 68} baseItemSize={isMobile ? 40 : 50} magnification={isMobile ? 56 : 70} />
       </div>
     </>
   );

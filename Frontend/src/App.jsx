@@ -4,6 +4,7 @@ import HomePage from './HomePage';
 import GalaxyPage from './GalaxyPage';
 import ProfilePage from './ProfilePage';
 import ArchivePage from './ArchivePage';
+import AnalyticsPage from './AnalyticsPage';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/galaxy" element={<GalaxyPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/archive" element={<ArchivePage />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
       </Routes>
     </Router>
   );

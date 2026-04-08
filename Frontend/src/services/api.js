@@ -5,6 +5,18 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+const request = async (url, options) => {
+  try {
+    const response = await fetch(url, options);
+    return handleResponse(response);
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error('Backend is unreachable. Start the API server and retry.');
+    }
+    throw error;
+  }
+};
+
 const handleResponse = async (response) => {
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
@@ -17,47 +29,44 @@ export const apiService = {
   // --- Victim Endpoints ---
   registerVictim: async (formData) => {
     // Expects FormData with: name, age, description, photo
-    const response = await fetch(`${API_BASE_URL}/victim/register`, {
+    return request(`${API_BASE_URL}/victim/register`, {
       method: 'POST',
       body: formData,
     });
-    return handleResponse(response);
   },
 
   getVictimProfile: async () => {
-    const response = await fetch(`${API_BASE_URL}/victim/profile`);
-    return handleResponse(response);
+    return request(`${API_BASE_URL}/victim/profile`);
   },
 
   // --- Sighting Endpoints ---
   reportSighting: async (formData) => {
     // Expects FormData with: location, timestamp, latitude, longitude, notes, image
-    const response = await fetch(`${API_BASE_URL}/sighting/report`, {
+    return request(`${API_BASE_URL}/sighting/report`, {
       method: 'POST',
       body: formData,
     });
-    return handleResponse(response);
   },
 
   getAllSightings: async () => {
-    const response = await fetch(`${API_BASE_URL}/sightings/all`);
-    return handleResponse(response);
+    return request(`${API_BASE_URL}/sightings/all`);
+  },
+
+  getSightingLogs: async () => {
+    return request(`${API_BASE_URL}/sightings/logs`);
   },
 
   getAlerts: async () => {
-    const response = await fetch(`${API_BASE_URL}/sightings/alerts`);
-    return handleResponse(response);
+    return request(`${API_BASE_URL}/sightings/alerts`);
   },
 
   // --- Dashboard Stats ---
   getDashboardStats: async () => {
-    const response = await fetch(`${API_BASE_URL}/sightings/stats`);
-    return handleResponse(response);
+    return request(`${API_BASE_URL}/sightings/stats`);
   },
 
   // --- Health Check ---
   healthCheck: async () => {
-    const response = await fetch(`${API_BASE_URL}/`);
-    return handleResponse(response);
+    return request(`${API_BASE_URL}/`);
   }
 };
